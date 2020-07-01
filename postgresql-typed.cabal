@@ -1,6 +1,6 @@
 Name:          postgresql-typed
 Version:       0.6.1.1
-Cabal-Version: >= 1.8
+Cabal-Version: >= 1.10
 License:       BSD3
 License-File:  COPYING
 Copyright:     2010-2013 Chris Forno, 2014-2019 Dylan Simon
@@ -59,6 +59,7 @@ Flag tls
   Default: True
 
 Library
+  default-language:    Haskell2010
   Build-Depends:
     base >= 4.8 && < 5,
     array,
@@ -112,17 +113,19 @@ Library
     Build-Depends: data-default, tls, x509, x509-store, x509-validation
 
 test-suite test
+  default-language:    Haskell2010
   type: exitcode-stdio-1.0
   hs-source-dirs: test
   main-is: Main.hs
   Other-Modules: Connect
-  Extensions: TemplateHaskell, QuasiQuotes
+  default-Extensions: TemplateHaskell, QuasiQuotes
   build-depends: base, network, time, bytestring, postgresql-typed, QuickCheck
   GHC-Options: -Wall
   if flag(tls)
     Build-Depends: tls
 
 test-suite hdbc
+  default-language:    Haskell2010
   type: exitcode-stdio-1.0
   hs-source-dirs: test/hdbc, test
   main-is: runtests.hs
@@ -143,6 +146,7 @@ test-suite hdbc
     Build-Depends: tls
 
 benchmark bench
+  default-language:    Haskell2010
   type: exitcode-stdio-1.0
   hs-source-dirs: test
   main-is: Bench.hs
