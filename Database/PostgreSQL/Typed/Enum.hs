@@ -91,7 +91,7 @@ dataPGEnum typs pgenum valnf = do
 #endif
       [''Eq, ''Ord, ''Enum, ''Ix, ''Bounded, ''Typeable]
     , instanceD [] (TH.ConT ''PGType `TH.AppT` typl)
-      [ TH.TySynInstD ''PGVal $ TH.TySynEqn [typl] typt
+      [ tySynInstD ''PGVal typl typt
       ]
     , instanceD [] (TH.ConT ''PGParameter `TH.AppT` typl `TH.AppT` typt)
       [ TH.FunD 'pgEncode [TH.Clause [TH.WildP, TH.VarP dv]
@@ -108,7 +108,7 @@ dataPGEnum typs pgenum valnf = do
         []]
       ]
     , instanceD [] (TH.ConT ''PGRep `TH.AppT` typt)
-      [ TH.TySynInstD ''PGRepType $ TH.TySynEqn [typt] typl
+      [ tySynInstD ''PGRepType typt typl
       ]
     , instanceD [] (TH.ConT ''PGEnum `TH.AppT` typt)
       [ TH.FunD 'pgEnumName $ map (\(n, l) -> TH.Clause [TH.ConP n []]
@@ -135,4 +135,11 @@ dataPGEnum typs pgenum valnf = do
 #if MIN_VERSION_template_haskell(2,11,0)
       Nothing
 #endif
+  tySynInstD c l t = TH.TySynInstD
+#if MIN_VERSION_template_haskell(2,15,0)
+    $ TH.TySynEqn Nothing (TH.AppT (TH.ConT c) l)
+#else
+    c $ TH.TySynEqn [l]
+#endif
+    t
   namelit l = TH.ConE 'PGName `TH.AppE` TH.ListE (map TH.LitE l)

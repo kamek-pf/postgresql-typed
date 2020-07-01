@@ -114,7 +114,7 @@ dataPGRelation typs pgtab colf = do
       ]
       []
     , instanceD [] (TH.ConT ''PGType `TH.AppT` typl)
-      [ TH.TySynInstD ''PGVal $ TH.TySynEqn [typl] typt
+      [ tySynInstD ''PGVal typl typt
       ]
     , instanceD [] (TH.ConT ''PGParameter `TH.AppT` typl `TH.AppT` typt)
       [ encfun 'pgEncode
@@ -158,7 +158,7 @@ dataPGRelation typs pgtab colf = do
       ]
 #endif
     , instanceD [] (TH.ConT ''PGRep `TH.AppT` typt)
-      [ TH.TySynInstD ''PGRepType $ TH.TySynEqn [typt] typl
+      [ tySynInstD ''PGRepType typt typl
       ]
     , instanceD [] (TH.ConT ''PGRecordType `TH.AppT` typl) []
     , instanceD [] (TH.ConT ''PGRelation `TH.AppT` typt)
@@ -191,6 +191,13 @@ dataPGRelation typs pgtab colf = do
 #if MIN_VERSION_template_haskell(2,11,0)
       Nothing
 #endif
+  tySynInstD c l t = TH.TySynInstD
+#if MIN_VERSION_template_haskell(2,15,0)
+    $ TH.TySynEqn Nothing (TH.AppT (TH.ConT c) l)
+#else
+    c $ TH.TySynEqn [l]
+#endif
+    t
   pgcall f t = TH.VarE f `TH.AppE`
     (TH.ConE 'PGTypeProxy `TH.SigE`
       (TH.ConT ''PGTypeID `TH.AppT` t))
