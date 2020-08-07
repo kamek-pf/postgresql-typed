@@ -220,7 +220,11 @@ makePGQuery QueryFlags{ flagNullable = nulls, flagPrepare = prep } sqle = do
       )
       prep)
     `TH.AppE` TH.LamE [TH.VarP e, TH.VarP l] (TH.CaseE (TH.VarE l)
-      [ TH.Match (TH.ListP pats) (TH.NormalB $ TH.TupE conv) []
+      [ TH.Match (TH.ListP pats) (TH.NormalB $ TH.TupE
+#if MIN_VERSION_template_haskell(2,16,0)
+          $ map Just
+#endif
+          conv) []
       , TH.Match TH.WildP (TH.NormalB $ TH.VarE 'error `TH.AppE` TH.LitE (TH.StringL "pgSQL: result arity mismatch")) []
       ]))
     <$> mapM parse exprs
