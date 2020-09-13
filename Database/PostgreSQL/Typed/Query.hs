@@ -25,6 +25,8 @@ import Data.Array (listArray, (!), inRange)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Lazy.UTF8 as BSLU
+import qualified Data.ByteString.UTF8 as BSU
 import Data.Char (isSpace, isAlphaNum)
 import qualified Data.Foldable as Fold
 import Data.List (dropWhileEnd)
@@ -148,7 +150,7 @@ sqlSubstitute sql exprl = TH.AppE (TH.VarE 'BS.concat) $ TH.ListE $ map sst $ sq
     | inRange bnds n = exprs ! n
     | otherwise = error $ "SQL placeholder '$" ++ show n ++ "' out of range (not recognized by PostgreSQL)"
   sst (SQLParam n) = expr n
-  sst t = TH.VarE 'fromString `TH.AppE` TH.LitE (TH.StringL $ show t)
+  sst t = TH.VarE 'BSU.fromString `TH.AppE` TH.LitE (TH.StringL $ show t)
 
 splitCommas :: String -> [String]
 splitCommas = spl where
@@ -185,7 +187,7 @@ newName pre = TH.newName . ('_':) . (pre:) . filter (\c -> isAlphaNum c || c == 
 makePGQuery :: QueryFlags -> String -> TH.ExpQ
 makePGQuery QueryFlags{ flagQuery = False } sqle = pgSubstituteLiterals sqle
 makePGQuery QueryFlags{ flagNullable = nulls, flagPrepare = prep } sqle = do
-  (pt, rt) <- TH.runIO $ tpgDescribe (fromString sqlp) (fromMaybe [] prep) (isNothing nulls)
+  (pt, rt) <- TH.runIO $ tpgDescribe (BSU.fromString sqlp) (fromMaybe [] prep) (isNothing nulls)
   when (length pt < length exprs) $ fail "Not all expression placeholders were recognized by PostgreSQL"
 
   e <- TH.newName "_tenv"
@@ -208,7 +210,7 @@ makePGQuery QueryFlags{ flagNullable = nulls, flagPrepare = prep } sqle = do
       (TH.ConE 'SimpleQuery
         `TH.AppE` sqlSubstitute sqlp vals)
       (\p -> TH.ConE 'PreparedQuery
-        `TH.AppE` (TH.VarE 'fromString `TH.AppE` TH.LitE (TH.StringL sqlp))
+        `TH.AppE` (TH.VarE 'BSU.fromString `TH.AppE` TH.LitE (TH.StringL sqlp))
         `TH.AppE` TH.ListE (map (TH.LitE . TH.IntegerL . toInteger . tpgValueTypeOID . snd) $ zip p pt)
         `TH.AppE` TH.ListE vals 
         `TH.AppE` TH.ListE 
@@ -255,7 +257,7 @@ qqTop :: Bool -> String -> TH.DecsQ
 qqTop True ('!':sql) = qqTop False sql
 qqTop err sql = do
   r <- TH.runIO $ try $ withTPGConnection $ \c ->
-    pgSimpleQuery c (fromString sql)
+    pgSimpleQuery c (BSLU.fromString sql)
   either ((if err then TH.reportError else TH.reportWarning) . (show :: PGError -> String)) (const $ return ()) r
   return []
 
