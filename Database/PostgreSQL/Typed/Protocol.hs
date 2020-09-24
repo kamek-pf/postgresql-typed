@@ -707,6 +707,7 @@ pgConnect db = do
     , ("bytea_output", "hex")
     , ("DateStyle", "ISO, YMD")
     , ("IntervalStyle", "iso_8601")
+    , ("extra_float_digits", "3")
     ] ++ pgDBParams db
   pgFlush c
   conn c

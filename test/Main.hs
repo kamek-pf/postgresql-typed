@@ -84,7 +84,7 @@ instance Q.Arbitrary SQLToken where
     , SQLExpr <$> Q.arbitrary
     , SQLQMark <$> Q.arbitrary
     ]
-    
+
 newtype Str = Str { strString :: [Char] } deriving (Eq, Show)
 strByte :: Str -> BS.ByteString
 strByte = BSC.pack . strString
@@ -106,9 +106,28 @@ selectProp :: PGConnection -> Bool -> Word8 -> Int32 -> Float -> Time.LocalTime 
 selectProp pgc b c i f t z d p s l r e a = Q.ioProperty $ do
   [(Just b', Just c', Just i', Just f', Just s', Just d', Just t', Just z', Just p', Just l', Just r', Just e', Just a')] <- pgQuery pgc
     [pgSQL|$SELECT ${b}::bool, ${c}::"char", ${Just i}::int, ${f}::float4, ${strString s}::varchar, ${Just d}::date, ${t}::timestamp, ${z}::timestamptz, ${p}::interval, ${map (fmap strByte) l}::text[], ${r}::int4range, ${e}::myenum, ${a}::inet|]
-  return $ Q.conjoin 
+  return $ Q.conjoin
     [ i Q.=== i'
     , c Q.=== c'
+    , b Q.=== b'
+    , strString s Q.=== s'
+    , f Q.=== f'
+    , d Q.=== d'
+    , t Q.=== t'
+    , z Q.=== z'
+    , p Q.=== p'
+    , l Q.=== map (fmap byteStr) l'
+    , Range.normalize' r Q.=== r'
+    , e Q.=== e'
+    , a Q.=== a'
+    ]
+
+selectProp' :: PGConnection -> Bool -> Int32 -> Float -> Time.LocalTime -> Time.UTCTime -> Time.Day -> Time.DiffTime -> Str -> [Maybe Str] -> Range.Range Int32 -> MyEnum -> PGInet -> Q.Property
+selectProp' pgc b i f t z d p s l r e a = Q.ioProperty $ do
+  [(Just b', Just i', Just f', Just s', Just d', Just t', Just z', Just p', Just l', Just r', Just e', Just a')] <- pgQuery pgc
+    [pgSQL|SELECT ${b}::bool, ${Just i}::int, ${f}::float4, ${strString s}::varchar, ${Just d}::date, ${t}::timestamp, ${z}::timestamptz, ${p}::interval, ${map (fmap strByte) l}::text[], ${r}::int4range, ${e}::myenum, ${a}::inet|]
+  return $ Q.conjoin
+    [ i Q.=== i'
     , b Q.=== b'
     , strString s Q.=== s'
     , f Q.=== f'
@@ -135,6 +154,7 @@ main = do
 
   r <- Q.quickCheckResult
     $ selectProp c
+    Q..&&. selectProp' c
     Q..&&. tokenProp
     Q..&&. [pgSQL|#abc ${3.14::Float} def $f$ $$ ${1} $f$${2::Int32}|] Q.=== "abc 3.14::real def $f$ $$ ${1} $f$2::integer"
     Q..&&. getQueryString (pgTypeEnv c) ([pgSQL|SELECT ${"ab'cd"::String}::text, ${3.14::Float}::float4|] :: PGSimpleQuery (Maybe String, Maybe Float)) Q.=== "SELECT 'ab''cd'::text, 3.14::float4"

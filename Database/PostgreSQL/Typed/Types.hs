@@ -232,7 +232,9 @@ pgQuoteUnsafe = (`BSC.snoc` '\'') . BSC.cons '\''
 
 -- |Produce a SQL string literal by wrapping (and escaping) a string with single quotes.
 pgQuote :: BS.ByteString -> BS.ByteString
-pgQuote = pgQuoteUnsafe . BSC.intercalate (BSC.pack "''") . BSC.split '\''
+pgQuote s
+  | '\0' `BSC.elem` s = error "pgQuote: unhandled null in literal"
+  | otherwise = pgQuoteUnsafe $ BSC.intercalate (BSC.pack "''") $ BSC.split '\'' s
 
 -- |Shorthand for @'BSL.toStrict' . 'BSB.toLazyByteString'@
 buildPGValue :: BSB.Builder -> BS.ByteString
