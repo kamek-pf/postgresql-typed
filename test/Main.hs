@@ -5,8 +5,6 @@ module Main (main) where
 
 import Control.Exception (try)
 import Control.Monad (unless)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BSC
 import Data.Char (isDigit, toUpper)
 import Data.Int (Int32)
 import qualified Data.Time as Time
@@ -85,14 +83,6 @@ instance Q.Arbitrary SQLToken where
     , SQLQMark <$> Q.arbitrary
     ]
 
-newtype Str = Str { strString :: [Char] } deriving (Eq, Show)
-strByte :: Str -> BS.ByteString
-strByte = BSC.pack . strString
-byteStr :: BS.ByteString -> Str
-byteStr = Str . BSC.unpack
-instance Q.Arbitrary Str where
-  arbitrary = Str <$> Q.listOf (Q.choose (' ', '~'))
-
 simple :: PGConnection -> OID -> IO [String]
 simple c t = pgQuery c [pgSQL|SELECT typname FROM pg_catalog.pg_type WHERE oid = ${t} AND oid = $1|]
 simpleApply :: PGConnection -> OID -> IO [Maybe String]
@@ -102,40 +92,40 @@ prepared c t = pgQuery c . [pgSQL|?$SELECT typname FROM pg_catalog.pg_type WHERE
 preparedApply :: PGConnection -> Int32 -> IO [String]
 preparedApply c = pgQuery c . [pgSQL|$(integer)SELECT typname FROM pg_catalog.pg_type WHERE oid = $1|]
 
-selectProp :: PGConnection -> Bool -> Word8 -> Int32 -> Float -> Time.LocalTime -> Time.UTCTime -> Time.Day -> Time.DiffTime -> Str -> [Maybe Str] -> Range.Range Int32 -> MyEnum -> PGInet -> Q.Property
+selectProp :: PGConnection -> Bool -> Word8 -> Int32 -> Float -> Time.LocalTime -> Time.UTCTime -> Time.Day -> Time.DiffTime -> Q.UnicodeString -> [Maybe Q.UnicodeString] -> Range.Range Int32 -> MyEnum -> PGInet -> Q.Property
 selectProp pgc b c i f t z d p s l r e a = Q.ioProperty $ do
   [(Just b', Just c', Just i', Just f', Just s', Just d', Just t', Just z', Just p', Just l', Just r', Just e', Just a')] <- pgQuery pgc
-    [pgSQL|$SELECT ${b}::bool, ${c}::"char", ${Just i}::int, ${f}::float4, ${strString s}::varchar, ${Just d}::date, ${t}::timestamp, ${z}::timestamptz, ${p}::interval, ${map (fmap strByte) l}::text[], ${r}::int4range, ${e}::myenum, ${a}::inet|]
+    [pgSQL|$SELECT ${b}::bool, ${c}::"char", ${Just i}::int, ${f}::float4, ${Q.getUnicodeString s}::varchar, ${Just d}::date, ${t}::timestamp, ${z}::timestamptz, ${p}::interval, ${map (fmap Q.getUnicodeString) l}::text[], ${r}::int4range, ${e}::myenum, ${a}::inet|]
   return $ Q.conjoin
     [ i Q.=== i'
     , c Q.=== c'
     , b Q.=== b'
-    , strString s Q.=== s'
+    , Q.getUnicodeString s Q.=== s'
     , f Q.=== f'
     , d Q.=== d'
     , t Q.=== t'
     , z Q.=== z'
     , p Q.=== p'
-    , l Q.=== map (fmap byteStr) l'
+    , map (fmap Q.getUnicodeString) l Q.=== l'
     , Range.normalize' r Q.=== r'
     , e Q.=== e'
     , a Q.=== a'
     ]
 
-selectProp' :: PGConnection -> Bool -> Int32 -> Float -> Time.LocalTime -> Time.UTCTime -> Time.Day -> Time.DiffTime -> Str -> [Maybe Str] -> Range.Range Int32 -> MyEnum -> PGInet -> Q.Property
+selectProp' :: PGConnection -> Bool -> Int32 -> Float -> Time.LocalTime -> Time.UTCTime -> Time.Day -> Time.DiffTime -> Q.UnicodeString -> [Maybe Q.UnicodeString] -> Range.Range Int32 -> MyEnum -> PGInet -> Q.Property
 selectProp' pgc b i f t z d p s l r e a = Q.ioProperty $ do
   [(Just b', Just i', Just f', Just s', Just d', Just t', Just z', Just p', Just l', Just r', Just e', Just a')] <- pgQuery pgc
-    [pgSQL|SELECT ${b}::bool, ${Just i}::int, ${f}::float4, ${strString s}::varchar, ${Just d}::date, ${t}::timestamp, ${z}::timestamptz, ${p}::interval, ${map (fmap strByte) l}::text[], ${r}::int4range, ${e}::myenum, ${a}::inet|]
+    [pgSQL|SELECT ${b}::bool, ${Just i}::int, ${f}::float4, ${Q.getUnicodeString s}::varchar, ${Just d}::date, ${t}::timestamp, ${z}::timestamptz, ${p}::interval, ${map (fmap Q.getUnicodeString) l}::text[], ${r}::int4range, ${e}::myenum, ${a}::inet|]
   return $ Q.conjoin
     [ i Q.=== i'
     , b Q.=== b'
-    , strString s Q.=== s'
+    , Q.getUnicodeString s Q.=== s'
     , f Q.=== f'
     , d Q.=== d'
     , t Q.=== t'
     , z Q.=== z'
     , p Q.=== p'
-    , l Q.=== map (fmap byteStr) l'
+    , map (fmap Q.getUnicodeString) l Q.=== l'
     , Range.normalize' r Q.=== r'
     , e Q.=== e'
     , a Q.=== a'
