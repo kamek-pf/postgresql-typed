@@ -36,7 +36,8 @@ useTPGDatabase db
 -- This runs at compile-time:
 [pgSQL|!CREATE TYPE myenum AS enum ('abc', 'DEF', 'XX_ye')|]
 
-[pgSQL|!CREATE TABLE myfoo (id serial primary key, adx myenum, bar char(4))|]
+[pgSQL|!DROP TABLE myfoo|]
+[pgSQL|!CREATE TABLE myfoo (id serial primary key, adé myenum, bar float)|]
 
 dataPGEnum "MyEnum" "myenum" ("MyEnum_" ++)
 
@@ -44,11 +45,13 @@ deriving instance Show MyEnum
 
 dataPGRelation "MyFoo" "myfoo" (\(c:s) -> "foo" ++ toUpper c : s)
 
-_fooRow :: MyFoo
-_fooRow = MyFoo{ fooId = 1, fooAdx = Just MyEnum_DEF, fooBar = Just "abcd" }
-
 instance Q.Arbitrary MyEnum where
   arbitrary = Q.arbitraryBoundedEnum
+instance Q.Arbitrary MyFoo where
+  arbitrary = MyFoo 0 <$> Q.arbitrary <*> Q.arbitrary
+instance Eq MyFoo where
+  MyFoo _ a b == MyFoo _ a' b' = a == a' && b == b'
+deriving instance Show MyFoo
 
 instance Q.Arbitrary Time.Day where
   arbitrary = Time.ModifiedJulianDay <$> Q.arbitrary
@@ -131,6 +134,21 @@ selectProp' pgc b i f t z d p s l r e a = Q.ioProperty $ do
     , a Q.=== a'
     ]
 
+selectFoo :: PGConnection -> [MyFoo] -> Q.Property
+selectFoo pgc l = Q.ioProperty $ do
+  _ <- pgExecute pgc [pgSQL|TRUNCATE myfoo|]
+  let loop [] = return ()
+      loop [x] = do
+        1 <- pgExecute pgc [pgSQL|INSERT INTO myfoo (bar, adé) VALUES (${fooBar x}, ${fooAdé x})|]
+        return ()
+      loop (x:y:r) = do
+        1 <- pgExecute pgc [pgSQL|INSERT INTO myfoo (adé, bar) VALUES (${fooAdé x}, ${fooBar x})|]
+        1 <- pgExecute pgc [pgSQL|$INSERT INTO myfoo (adé, bar) VALUES (${fooAdé y}, ${fooBar y})|]
+        loop r
+  loop l
+  r <- pgQuery pgc [pgSQL|SELECT * FROM myfoo ORDER BY id|]
+  return $ l Q.=== map (\(i,a,b) -> MyFoo i a b) r
+
 tokenProp :: String -> Q.Property
 tokenProp s =
   not (has0 s) Q.==> s Q.=== show (sqlTokens s) where
@@ -145,6 +163,7 @@ main = do
   r <- Q.quickCheckResult
     $ selectProp c
     Q..&&. selectProp' c
+    Q..&&. selectFoo c
     Q..&&. tokenProp
     Q..&&. [pgSQL|#abc ${3.14::Float} def $f$ $$ ${1} $f$${2::Int32}|] Q.=== "abc 3.14::real def $f$ $$ ${1} $f$2::integer"
     Q..&&. getQueryString (pgTypeEnv c) ([pgSQL|SELECT ${"ab'cd"::String}::text, ${3.14::Float}::float4|] :: PGSimpleQuery (Maybe String, Maybe Float)) Q.=== "SELECT 'ab''cd'::text, 3.14::float4"
