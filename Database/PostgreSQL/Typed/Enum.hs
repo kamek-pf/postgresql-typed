@@ -111,11 +111,11 @@ dataPGEnum typs pgenum valnf = do
       [ tySynInstD ''PGRepType typt typl
       ]
     , instanceD [] (TH.ConT ''PGEnum `TH.AppT` typt)
-      [ TH.FunD 'pgEnumName $ map (\(n, l) -> TH.Clause [TH.ConP n []]
+      [ TH.FunD 'pgEnumName $ map (\(n, l) -> TH.Clause [conP n []]
         (TH.NormalB $ namelit l)
         []) valn
       , TH.FunD 'pgEnumValue $ map (\(n, l) ->
-          TH.Clause [TH.ConP 'PGName [TH.ListP (map TH.LitP l)]]
+          TH.Clause [conP 'PGName [TH.ListP (map TH.LitP l)]]
             (TH.NormalB $ TH.ConE 'Just `TH.AppE` TH.ConE n)
             []) valn
           ++ [TH.Clause [TH.WildP] (TH.NormalB $ TH.ConE 'Nothing) []]
@@ -143,3 +143,8 @@ dataPGEnum typs pgenum valnf = do
 #endif
     t
   namelit l = TH.ConE 'PGName `TH.AppE` TH.ListE (map TH.LitE l)
+  conP n p = TH.ConP n
+#if MIN_VERSION_template_haskell(2,18,0)
+    []
+#endif
+    p

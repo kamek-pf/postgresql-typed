@@ -86,7 +86,7 @@ dataPGRelation typs pgtab colf = do
       return (v, t, nn))
     cold
   let typl = TH.LitT (TH.StrTyLit $ pgNameString pgid)
-      encfun f = TH.FunD f [TH.Clause [TH.WildP, TH.ConP typn (map (\(v, _, _) -> TH.VarP v) cols)]
+      encfun f = TH.FunD f [TH.Clause [TH.WildP, conP typn (map (\(v, _, _) -> TH.VarP v) cols)]
         (TH.NormalB $ pgcall f rect `TH.AppE`
           (TH.ConE 'PGRecord `TH.AppE` TH.ListE (map (colenc f) cols)))
         [] ]
@@ -124,7 +124,7 @@ dataPGRelation typs pgtab colf = do
       [ TH.FunD 'pgDecode [TH.Clause [TH.WildP, TH.VarP dv]
         (TH.GuardedB
           [ (TH.PatG [TH.BindS
-              (TH.ConP 'PGRecord [TH.ListP $ map colpat cols])
+              (conP 'PGRecord [TH.ListP $ map colpat cols])
               (pgcall 'pgDecode rect `TH.AppE` TH.VarE dv)]
             , foldl (\f -> TH.AppE f . coldec) (TH.ConE typn) cols)
           , (TH.NormalG (TH.ConE 'True)
@@ -137,7 +137,7 @@ dataPGRelation typs pgtab colf = do
       [ TH.FunD 'pgDecode [TH.Clause [TH.WildP, TH.VarP dv]
         (TH.GuardedB
           [ (TH.PatG [TH.BindS
-              (TH.ConP 'PGRecord [TH.ListP $ map colpat cols])
+              (conP 'PGRecord [TH.ListP $ map colpat cols])
               (pgcall 'pgDecode rect `TH.AppE` TH.VarE dv)]
             , TH.ConE 'Just `TH.AppE` foldl (\f -> TH.AppE f . coldec) (TH.ConE typn) cols)
           , (TH.NormalG (TH.ConE 'True)
@@ -145,13 +145,13 @@ dataPGRelation typs pgtab colf = do
           ])
         [] ]
       , TH.FunD 'pgDecodeValue
-        [ TH.Clause [TH.WildP, TH.WildP, TH.ConP 'PGNullValue []]
+        [ TH.Clause [TH.WildP, TH.WildP, conP 'PGNullValue []]
           (TH.NormalB $ TH.ConE 'Nothing)
           []
-        , TH.Clause [TH.WildP, TH.VarP tv, TH.ConP 'PGTextValue [TH.VarP dv]]
+        , TH.Clause [TH.WildP, TH.VarP tv, conP 'PGTextValue [TH.VarP dv]]
           (TH.NormalB $ TH.VarE 'pgDecode `TH.AppE` TH.VarE tv `TH.AppE` TH.VarE dv)
           []
-        , TH.Clause [TH.VarP ev, TH.VarP tv, TH.ConP 'PGBinaryValue [TH.VarP dv]]
+        , TH.Clause [TH.VarP ev, TH.VarP tv, conP 'PGBinaryValue [TH.VarP dv]]
           (TH.NormalB $ TH.VarE 'pgDecodeBinary `TH.AppE` TH.VarE ev `TH.AppE` TH.VarE tv `TH.AppE` TH.VarE dv)
           []
         ]
@@ -176,7 +176,7 @@ dataPGRelation typs pgtab colf = do
         (TH.ConT (TH.tupleTypeName (length cols)))
         cols `TH.AppT` typt
     , TH.FunD (TH.mkName ("uncurry" ++ typs))
-      [ TH.Clause [TH.ConP (TH.tupleDataName (length cols)) (map (\(v, _, _) -> TH.VarP v) cols)]
+      [ TH.Clause [conP (TH.tupleDataName (length cols)) (map (\(v, _, _) -> TH.VarP v) cols)]
         (TH.NormalB $ foldl (\f (v, _, _) -> f `TH.AppE` TH.VarE v) (TH.ConE typn) cols)
         []
       ]
@@ -203,10 +203,15 @@ dataPGRelation typs pgtab colf = do
       (TH.ConT ''PGTypeID `TH.AppT` t))
   colenc f (v, t, False) = TH.ConE 'Just `TH.AppE` (pgcall f t `TH.AppE` TH.VarE v)
   colenc f (v, t, True) = TH.VarE 'fmap `TH.AppE` pgcall f t `TH.AppE` TH.VarE v
-  colpat (v, _, False) = TH.ConP 'Just [TH.VarP v]
+  colpat (v, _, False) = conP 'Just [TH.VarP v]
   colpat (v, _, True) = TH.VarP v
   coldec (v, t, False) = pgcall 'pgDecode t `TH.AppE` TH.VarE v
   coldec (v, t, True) = TH.VarE 'fmap `TH.AppE` pgcall 'pgDecode t `TH.AppE` TH.VarE v
   rect = TH.LitT $ TH.StrTyLit "record"
   namelit n = TH.ConE 'PGName `TH.AppE`
     TH.ListE (map (TH.LitE . TH.IntegerL . fromIntegral) $ pgNameBytes n)
+  conP n p = TH.ConP n
+#if MIN_VERSION_template_haskell(2,18,0)
+    []
+#endif
+    p
