@@ -14,7 +14,7 @@ Use your preferred package manager to install or add to your package dependencie
 
 ### Enable ghc extensions
 
-Make sure you enable `TemplateHaskell` and `QuasiQuotes` language extensions, either in your cabal `default-extensions` or in a `{-# LANGUAGE TemplateHaskell, QuasiQuotes #-}` pragma in your source.
+Make sure you enable `TemplateHaskell`, `QuasiQuotes`, and `DataKinds` language extensions, either in your cabal `default-extensions` or in a `{-# LANGUAGE TemplateHaskell, QuasiQuotes, DataKinds #-}` pragma in your source.
 
 ### Setup compile-time database connection
 
@@ -49,6 +49,11 @@ If you need a pool of connections, consider `resource-pool` (while `PGConnection
 
 ### Complete example
 
+schema.sql:
+```sql
+CREATE TABLE thing (id SERIAL PRIMARY KEY, name TEXT NOT NULL);
+```
+
 DBConfig.hs:
 ```haskell
 module DBConfig where
@@ -64,30 +69,34 @@ myPGDatabase = PG.defaultPGDatabase
 
 Main.hs:
 ```haskell
-{-# LANGUAGE TemplateHaskell, QuasiQuotes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 import           Control.Exception (bracket)
-import           Control.Monad (unless)
+import           Control.Monad (void, unless)
+import           Data.Int (Int32)
+import           Data.Maybe (listToMaybe)
 import qualified Database.PostgreSQL.Typed as PG
 
 import DBConfig
 
 PG.useTPGDatabase myPGDatabase
 
-data Thing = Thing Int String
+data Thing = Thing Int32 String
   deriving (Eq)
 
 createThing :: PG.PGConnection -> Thing -> IO ()
 createThing pg (Thing tid tname) =
   void $ PG.pgExecute pg [PG.pgSQL|INSERT INTO thing (id, name) VALUES (${tid}, ${tname})|]
 
-lookupThing :: PG.PGConnection -> Int -> IO (Maybe Thing)
+lookupThing :: PG.PGConnection -> Int32 -> IO (Maybe Thing)
 lookupThing pg tid = fmap (uncurry Thing) . listToMaybe <$>
   PG.pgQuery pg [PG.pgSQL|SELECT id, name FROM thing WHERE id = ${tid}|]
 
 main = bracket (PG.pgConnect myPGDatabase) PG.pgDisconnect $ \pg -> do
   let myt = Thing 1 "cat"
   createThing pg myt
-  t <- lookupThing 1
+  t <- lookupThing pg 1
   unless (t == Just myt) $ fail "wrong thing!"
 ```
