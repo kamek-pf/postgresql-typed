@@ -12,6 +12,8 @@ Use your preferred package manager to install or add to your package dependencie
 - `stack install postgresql-typed` or
 - `cabal install postgresql-typed`
 
+You'll also likely need to add `network` as a dependency.
+
 ### Enable ghc extensions
 
 Make sure you enable `TemplateHaskell`, `QuasiQuotes`, and `DataKinds` language extensions, either in your cabal `default-extensions` or in a `{-# LANGUAGE TemplateHaskell, QuasiQuotes, DataKinds #-}` pragma in your source.
@@ -56,6 +58,7 @@ CREATE TABLE thing (id SERIAL PRIMARY KEY, name TEXT NOT NULL);
 
 DBConfig.hs:
 ```haskell
+{-# LANGUAGE OverloadedStrings #-}
 module DBConfig where
 
 import qualified Database.PostgreSQL.Typed as PG
@@ -63,8 +66,10 @@ import           Network.Socket (SockAddr(SockAddrUnix))
 
 myPGDatabase :: PG.PGDatabase
 myPGDatabase = PG.defaultPGDatabase
-  { PG.pgDBAddr = Right (SockAddrUnix "/run/postgresql/.s.PGSQL.5432")
-  }
+  { PG.pgDBAddr = if tcp then Left ("localhost", "5432") else Right (SockAddrUnix "/run/postgresql/.s.PGSQL.5432")
+  , PG.pgDBUser = "user"
+  , PG.pgDBName = "db"
+  } where tcp = False
 ```
 
 Main.hs:
