@@ -61,9 +61,9 @@ dataPGRelation :: String -- ^ Haskell type and constructor to create
 dataPGRelation typs pgtab colf = do
   (pgid, cold) <- TH.runIO $ withTPGTypeConnection $ \tpg -> do
     cl <- mapM (\[to, cn, ct, cnn] -> do
-      let c = pgDecodeRep cn
+      let c = pgDecodeRep cn :: PGName
           n = TH.mkName $ colf $ pgNameString c
-          o = pgDecodeRep ct
+          o = pgDecodeRep ct :: OID
       t <- maybe (fail $ "dataPGRelation " ++ typs ++ " = " ++ show pgtab ++ ": column '" ++ show c ++ "' has unknown type " ++ show o) return
         =<< lookupPGType tpg o
       return (pgDecodeRep to, (c, n, TH.LitT (TH.StrTyLit $ pgNameString t), not $ pgDecodeRep cnn)))
