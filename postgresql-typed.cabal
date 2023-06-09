@@ -60,7 +60,7 @@ Flag tls
 
 Flag crypton
   Description: Use crypton rather than cryptonite.
-  Default: True
+  Default: False
 
 Library
   default-language:    Haskell2010
