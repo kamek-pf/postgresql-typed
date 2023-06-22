@@ -118,11 +118,11 @@ Library
     Exposed-Modules:
       Database.PostgreSQL.Typed.HDBC
   if flag(tls)
-    Build-Depends: data-default, tls
+    Build-Depends: data-default
     if flag(crypton)
-      Build-Depends: crypton-x509, crypton-x509-store, crypton-x509-validation
+      Build-Depends: tls >= 1.7, crypton-x509, crypton-x509-store, crypton-x509-validation
     else
-      Build-Depends: x509, x509-store, x509-validation
+      Build-Depends: tls < 1.7, x509, x509-store, x509-validation
 
 test-suite test
   default-language:    Haskell2010
