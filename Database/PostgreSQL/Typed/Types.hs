@@ -50,6 +50,7 @@ import Control.Applicative ((<$>), (<$), (<*), (*>))
 import Control.Arrow ((&&&))
 #ifdef VERSION_aeson
 import qualified Data.Aeson as JSON
+import qualified Data.Aeson.Parser as JSON
 #endif
 import qualified Data.Attoparsec.ByteString as P (anyWord8)
 import qualified Data.Attoparsec.ByteString.Char8 as P
