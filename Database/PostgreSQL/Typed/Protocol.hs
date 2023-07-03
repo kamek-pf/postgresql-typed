@@ -73,7 +73,7 @@ import           Control.Exception (Exception, onException, finally, throwIO)
 import           Control.Exception (catch)
 #endif
 import           Control.Monad (void, liftM2, replicateM, when, unless)
-#ifdef VERSION_cryptonite
+#if defined(VERSION_cryptonite) || defined(VERSION_crypton)
 import qualified Crypto.Hash as Hash
 import qualified Data.ByteArray.Encoding as BA
 #endif
@@ -413,7 +413,7 @@ pgConnectionDatabase = connDatabase
 pgTypeEnv :: PGConnection -> PGTypeEnv
 pgTypeEnv = connTypeEnv
 
-#ifdef VERSION_cryptonite
+#if defined(VERSION_cryptonite) || defined(VERSION_crypton)
 md5 :: BS.ByteString -> BS.ByteString
 md5 = BA.convertToBase BA.Base16 . (Hash.hash :: BS.ByteString -> Hash.Digest Hash.MD5)
 #endif
@@ -728,7 +728,7 @@ pgConnect db = do
     pgSend c $ PasswordMessage $ pgDBPass db
     pgFlush c
     conn c
-#ifdef VERSION_cryptonite
+#if defined(VERSION_cryptonite) || defined(VERSION_crypton)
   msg c (Left (AuthenticationMD5Password salt)) = do
     pgSend c $ PasswordMessage $ "md5" `BS.append` md5 (md5 (pgDBPass db <> pgDBUser db) `BS.append` salt)
     pgFlush c
