@@ -800,7 +800,7 @@ instance PGParameter "json" JSON.Value where
   pgEncode _ = BSL.toStrict . JSON.encode
   BIN_ENC(BinE.json_ast)
 instance PGColumn "json" JSON.Value where
-  pgDecode _ j = either (error . ("pgDecode json (" ++) . (++ ("): " ++ BSC.unpack j))) id $ P.parseOnly JSON.json j
+  pgDecode _ j = either (error . ("pgDecode json (" ++) . (++ ("): " ++ BSC.unpack j))) id $ JSON.eitherDecodeStrict j
   BIN_DEC(BinD.json_ast)
 
 instance PGType "jsonb" where
@@ -810,7 +810,7 @@ instance PGParameter "jsonb" JSON.Value where
   pgEncode _ = BSL.toStrict . JSON.encode
   BIN_ENC(BinE.jsonb_ast)
 instance PGColumn "jsonb" JSON.Value where
-  pgDecode _ j = either (error . ("pgDecode jsonb (" ++) . (++ ("): " ++ BSC.unpack j))) id $ P.parseOnly JSON.json j
+  pgDecode _ j = either (error . ("pgDecode jsonb (" ++) . (++ ("): " ++ BSC.unpack j))) id $ JSON.eitherDecodeStrict j
   BIN_DEC(BinD.jsonb_ast)
 #endif
 
