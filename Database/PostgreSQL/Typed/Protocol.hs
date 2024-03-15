@@ -186,6 +186,7 @@ data PGDatabase = PGDatabase
   , pgDBLogMessage :: MessageFields -> IO () -- ^ How to log server notice messages (e.g., @print . PGError@)
 #ifdef VERSION_tls
   , pgDBTLS :: PGTlsMode -- ^ TLS mode
+  , pgDBTLSParams :: Maybe TLS.ClientParams -- ^ TLS client params
 #endif
   } deriving (Show)
 
@@ -394,6 +395,7 @@ defaultPGDatabase = PGDatabase
   , pgDBLogMessage = defaultLogMessage
 #ifdef VERSION_tls
   , pgDBTLS = TlsDisabled
+  , pgDBTLSParams = Nothing
 #endif
   }
 
@@ -754,12 +756,15 @@ mkPGHandle db sock =
           pure $ PGTlsContext ctx
         "N" -> throwIO (userError "Server does not support TLS")
         _ -> throwIO (userError "Unexpected response from server when issuing SSLRequest")
-    params = (TLS.defaultParamsClient tlsHost tlsPort)
-      { TLS.clientSupported =
-          def { TLS.supportedCiphers = TLS.ciphersuite_strong }
-      , TLS.clientShared = clientShared
-      , TLS.clientHooks = clientHooks
-      }
+    params = 
+      case pgDBTLSParams of
+        Nothing -> (TLS.defaultParamsClient tlsHost tlsPort)
+          { TLS.clientSupported =
+              def { TLS.supportedCiphers = TLS.ciphersuite_strong, TLS.supportedExtendedMasterSec = TLS.AllowEMS }
+          , TLS.clientShared = clientShared
+          , TLS.clientHooks = clientHooks
+          }
+        Just userParams -> userParams { TLS.clientShared = clientShared,TLS.clientHooks = clientHooks }
     tlsHost = case pgDBAddr db of
       Left (h,_) -> h
       Right (Net.SockAddrUnix s) -> s
