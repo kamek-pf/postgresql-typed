@@ -121,6 +121,7 @@ import qualified Network.Socket.ByteString as NetBS
 import qualified Network.Socket.ByteString.Lazy as NetBSL
 #ifdef VERSION_tls
 import qualified Network.TLS as TLS
+import qualified Network.TLS.Parameters as TLS
 import qualified Network.TLS.Extra.Cipher as TLS
 #endif
 import           System.IO (stderr, hPutStrLn)
