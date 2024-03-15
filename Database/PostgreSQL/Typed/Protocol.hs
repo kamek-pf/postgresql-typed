@@ -192,7 +192,7 @@ data PGDatabase = PGDatabase
 
 instance Eq PGDatabase where
 #ifdef VERSION_tls
-  PGDatabase a1 n1 u1 p1 l1 _ _ s1 == PGDatabase a2 n2 u2 p2 l2 _ _ s2 =
+  PGDatabase a1 n1 u1 p1 l1 _ _ s1 _ == PGDatabase a2 n2 u2 p2 l2 _ _ s2 _ =
     a1 == a2 && n1 == n2 && u1 == u2 && p1 == p2 && l1 == l2 && s1 == s2
 #else
   PGDatabase a1 n1 u1 p1 l1 _ _ == PGDatabase a2 n2 u2 p2 l2 _ _ =
@@ -757,7 +757,7 @@ mkPGHandle db sock =
         "N" -> throwIO (userError "Server does not support TLS")
         _ -> throwIO (userError "Unexpected response from server when issuing SSLRequest")
     params = 
-      case pgDBTLSParams of
+      case pgDBTLSParams db of
         Nothing -> (TLS.defaultParamsClient tlsHost tlsPort)
           { TLS.clientSupported =
               def 
