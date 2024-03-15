@@ -121,7 +121,6 @@ import qualified Network.Socket.ByteString as NetBS
 import qualified Network.Socket.ByteString.Lazy as NetBSL
 #ifdef VERSION_tls
 import qualified Network.TLS as TLS
-import qualified Network.TLS.Parameters as TLS
 import qualified Network.TLS.Extra.Cipher as TLS
 #endif
 import           System.IO (stderr, hPutStrLn)
@@ -761,11 +760,16 @@ mkPGHandle db sock =
       case pgDBTLSParams of
         Nothing -> (TLS.defaultParamsClient tlsHost tlsPort)
           { TLS.clientSupported =
-              def { TLS.supportedCiphers = TLS.ciphersuite_strong, TLS.supportedExtendedMasterSec = TLS.AllowEMS }
+              def 
+                  { TLS.supportedCiphers = TLS.ciphersuite_strong
+#if MIN_VERSION_tls(2,0,0)
+                  , TLS.supportedExtendedMainSecret = TLS.AllowEMS 
+#endif
+                  }
           , TLS.clientShared = clientShared
           , TLS.clientHooks = clientHooks
           }
-        Just userParams -> userParams { TLS.clientShared = clientShared,TLS.clientHooks = clientHooks }
+        Just userParams -> userParams { TLS.clientShared = clientShared, TLS.clientHooks = clientHooks }
     tlsHost = case pgDBAddr db of
       Left (h,_) -> h
       Right (Net.SockAddrUnix s) -> s
